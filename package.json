@@ -1,0 +1,14 @@
+{
+  "name": "sound-stream",
+  "version": "1.0.0",
+  "description": "SPIDERTEC SONIC TRANSFER PROTOCOL - file transfer over sound",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}

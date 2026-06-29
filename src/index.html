@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <title>SPIDERTEC SONIC TRANSFER PROTOCOL</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="crt">
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+
+    <div class="frame">
+      <!-- ===== HEADER ===== -->
+      <header class="topbar">
+        <div class="brand">
+          <span class="logo">☢</span>
+          <div class="brand-txt">
+            <div class="brand-l1">SPIDERTEC&nbsp;INDUSTRIES</div>
+            <div class="brand-l2">SONIC TRANSFER PROTOCOL&nbsp;&nbsp;//&nbsp;&nbsp;MODEL SS-1200</div>
+          </div>
+        </div>
+        <div class="status-cluster">
+          <div class="gauge" title="Signal">
+            <span class="g-label">SIG</span>
+            <div class="g-bar"><div id="sigBar" class="g-fill blue"></div></div>
+          </div>
+          <div id="clock" class="clock">--:--:--</div>
+        </div>
+      </header>
+
+      <!-- ===== MODE TABS ===== -->
+      <nav class="tabs">
+        <button id="tabSend" class="tab active">▶ TRANSMIT</button>
+        <button id="tabRecv" class="tab">◉ RECEIVE</button>
+        <div class="tab-spacer"></div>
+        <div class="mode-led"><span id="modeLed" class="led"></span><span id="modeTxt">IDLE</span></div>
+      </nav>
+
+      <!-- ===== MAIN GRID ===== -->
+      <main class="grid">
+        <!-- LEFT: scopes -->
+        <section class="panel scopes">
+          <div class="panel-hdr">OSCILLOSCOPE&nbsp;//&nbsp;WAVEFORM</div>
+          <canvas id="scope" class="scope"></canvas>
+          <div class="panel-hdr">SPECTRUM ANALYZER&nbsp;//&nbsp;FFT</div>
+          <canvas id="spectrum" class="spectrum"></canvas>
+          <div class="scope-foot">
+            <span>BAND <span id="bandTxt">1200–2700 Hz</span></span>
+            <span>SYNC <span id="syncTxt">1000 Hz</span></span>
+            <span>FEC <span id="fecTxt">XOR</span></span>
+          </div>
+        </section>
+
+        <!-- RIGHT: controls -->
+        <section class="panel controls">
+          <!-- SEND -->
+          <div id="sendView">
+            <div class="panel-hdr">TRANSMIT CONSOLE</div>
+
+            <label class="filebtn">
+              <input type="file" id="fileInput" hidden />
+              <span class="fb-icon">⬆</span>
+              <span id="fileLabel" class="fb-text">SELECT PAYLOAD FILE…</span>
+            </label>
+            <div id="fileMeta" class="filemeta"></div>
+
+            <div class="ctl-grid">
+              <div class="ctl">
+                <label>SYMBOL DURATION <output id="symOut">60 ms</output></label>
+                <input type="range" id="symRange" min="25" max="160" step="5" value="60" />
+              </div>
+              <div class="ctl">
+                <label>SYMBOL GAP <output id="gapOut">0 ms</output></label>
+                <input type="range" id="gapRange" min="0" max="80" step="5" value="0" />
+              </div>
+              <div class="ctl">
+                <label>BASE FREQ <output id="f0Out">1200 Hz</output></label>
+                <input type="range" id="f0Range" min="600" max="2000" step="50" value="1200" />
+              </div>
+              <div class="ctl">
+                <label>TONE SPACING <output id="spOut">100 Hz</output></label>
+                <input type="range" id="spRange" min="60" max="200" step="10" value="100" />
+              </div>
+              <div class="ctl">
+                <label>MODULATION</label>
+                <select id="bitsSel" class="st-select">
+                  <option value="2">4-FSK (2 bit/sym)</option>
+                  <option value="3">8-FSK (3 bit/sym)</option>
+                  <option value="4" selected>16-FSK (4 bit/sym)</option>
+                  <option value="5">32-FSK (5 bit/sym)</option>
+                  <option value="6">64-FSK (6 bit/sym)</option>
+                </select>
+              </div>
+              <div class="ctl">
+                <label>OUTPUT GAIN <output id="volOut">32%</output></label>
+                <input type="range" id="volRange" min="5" max="100" step="1" value="32" />
+              </div>
+              <div class="ctl">
+                <label>ERROR CORRECTION</label>
+                <select id="ecMode" class="st-select">
+                  <option value="rs">REED–SOLOMON (most reliable)</option>
+                  <option value="xor">XOR-FEC (erasure repair)</option>
+                  <option value="none">NONE</option>
+                </select>
+              </div>
+              <div class="ctl">
+                <label><span id="ecStrName">RS PARITY</span> <output id="densOut">16 B (±8)</output></label>
+                <input type="range" id="densRange" min="2" max="32" step="2" value="16" />
+              </div>
+            </div>
+
+            <div class="btn-row">
+              <button id="btnTransmit" class="big-btn" disabled>◀ TRANSMIT ▶</button>
+              <button id="btnWav" class="ghost-btn" disabled>SAVE .WAV</button>
+              <button id="btnStopTx" class="ghost-btn" disabled>ABORT</button>
+            </div>
+            <div class="btn-row">
+              <button id="btnTest" class="ghost-btn">⚙ TEST SIGNAL</button>
+              <button id="btnTone" class="ghost-btn">♪ SYNC TONE</button>
+              <button id="btnCalTx" class="ghost-btn">⚙ CALIBRATE</button>
+              <button id="btnBandTx" class="ghost-btn">⤢ FIND BAND</button>
+            </div>
+
+            <div class="estimate" id="estimate">awaiting payload…</div>
+          </div>
+
+          <!-- RECEIVE -->
+          <div id="recvView" hidden>
+            <div class="panel-hdr">RECEIVE CONSOLE</div>
+            <p class="hint">Tune the receiver to match the transmitter's BAND, SYNC and SYMBOL settings, then arm the dish.</p>
+
+            <div class="ctl ctl-wide">
+              <label>AUDIO INPUT DEVICE</label>
+              <div class="select-row">
+                <select id="audioInput" class="st-select"></select>
+                <button id="btnRefreshInputs" class="ghost-btn small" title="Rescan input devices">⟳</button>
+              </div>
+            </div>
+
+            <div class="ctl-grid">
+              <div class="ctl">
+                <label>SYMBOL DURATION <output id="rsymOut">60 ms</output></label>
+                <input type="range" id="rsymRange" min="25" max="160" step="5" value="60" />
+              </div>
+              <div class="ctl">
+                <label>SYMBOL GAP <output id="rgapOut">0 ms</output></label>
+                <input type="range" id="rgapRange" min="0" max="80" step="5" value="0" />
+              </div>
+              <div class="ctl">
+                <label>BASE FREQ <output id="rf0Out">1200 Hz</output></label>
+                <input type="range" id="rf0Range" min="600" max="2000" step="50" value="1200" />
+              </div>
+              <div class="ctl">
+                <label>TONE SPACING <output id="rspOut">100 Hz</output></label>
+                <input type="range" id="rspRange" min="60" max="200" step="10" value="100" />
+              </div>
+              <div class="ctl">
+                <label>MODULATION</label>
+                <select id="rbitsSel" class="st-select">
+                  <option value="2">4-FSK (2 bit/sym)</option>
+                  <option value="3">8-FSK (3 bit/sym)</option>
+                  <option value="4" selected>16-FSK (4 bit/sym)</option>
+                  <option value="5">32-FSK (5 bit/sym)</option>
+                  <option value="6">64-FSK (6 bit/sym)</option>
+                </select>
+              </div>
+              <div class="ctl">
+                <label>ERASURE THRESH <output id="thOut">1.8×</output></label>
+                <input type="range" id="thRange" min="11" max="40" step="1" value="18" />
+              </div>
+              <div class="ctl">
+                <label>INPUT GAIN <output id="rgainOut">1.0×</output></label>
+                <input type="range" id="rgainRange" min="1" max="200" step="1" value="10" />
+              </div>
+              <div class="ctl">
+                <label>TRACK RANGE <output id="rjitOut">40%</output></label>
+                <input type="range" id="rjitRange" min="0" max="50" step="5" value="40" />
+              </div>
+              <div class="ctl">
+                <label>TRACK GAIN <output id="rtgnOut">0.50</output></label>
+                <input type="range" id="rtgnRange" min="0" max="100" step="5" value="50" />
+              </div>
+            </div>
+
+            <div class="btn-row">
+              <button id="btnListen" class="big-btn">◉ ARM RECEIVER</button>
+              <button id="btnCalRx" class="ghost-btn">⚙ CALIBRATE</button>
+              <button id="btnBandRx" class="ghost-btn">⤢ FIND BAND</button>
+              <button id="btnResetRx" class="ghost-btn">↺ RESET</button>
+              <button id="btnStopRx" class="ghost-btn" disabled>DISARM</button>
+            </div>
+
+            <div class="eq-panel">
+              <div class="eq-hdr">
+                <span>PER-TONE EQ&nbsp;//&nbsp;RX</span>
+                <button id="btnEqFlat" class="ghost-btn small">FLAT</button>
+              </div>
+              <div id="eqBars" class="eq-bars"></div>
+              <div class="eq-foot"><span id="eqTip">drag a bar to boost / cut a tone</span></div>
+            </div>
+
+            <div class="btn-row tape-row">
+              <button id="btnReplay" class="ghost-btn small" disabled>▶ REPLAY DECODE</button>
+              <span id="tapeInfo" class="tape-info">no recording</span>
+            </div>
+
+            <div class="sync-meter">
+              <span class="sm-label">SYNC LOCK</span>
+              <div class="sm-bar">
+                <div id="syncStrBar" class="sm-fill"></div>
+                <div class="sm-thresh"></div>
+              </div>
+              <span id="syncStrVal" class="sm-val">0%</span>
+            </div>
+
+            <div class="rx-status" id="rxStatus">RECEIVER COLD</div>
+            <div class="progress"><div id="rxProgress" class="progress-fill"></div></div>
+
+            <div id="rxDetect" class="rx-detect"></div>
+
+            <div id="rxResult" class="rx-result" hidden>
+              <div class="rr-hdr">◀ PAYLOAD RECONSTRUCTED ▶</div>
+              <div id="rrMeta" class="rr-meta"></div>
+              <div id="rrPreview" class="rr-preview"></div>
+              <div class="btn-row">
+                <button id="btnSave" class="big-btn">⬇ SAVE FILE</button>
+                <button id="btnClear" class="ghost-btn">✕ CLEAR</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- ===== LOG ===== -->
+      <footer class="logbar">
+        <div class="log-hdr">SYSTEM LOG</div>
+        <div id="log" class="log"></div>
+      </footer>
+    </div>
+  </div>
+
+  <script src="modem.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
