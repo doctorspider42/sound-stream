@@ -4,11 +4,30 @@
   "description": "SPIDERTEC SONIC TRANSFER PROTOCOL - file transfer over sound",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "test": "node test/loopback.js",
+    "dist": "electron-builder --win portable"
   },
-  "author": "",
+  "author": "doctorspider42",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^31.0.0"
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.spidertec.sonic-transfer",
+    "productName": "SpiderTec Sonic Transfer",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "SpiderTec-Sonic-Transfer-${version}-portable.exe"
+    }
   }
 }
